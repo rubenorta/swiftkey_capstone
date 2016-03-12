@@ -1,0 +1,63 @@
+Quiz 1: Getting Started
+
+6 questions
+
+1. The en_US.blogs.txt  file is how many megabytes?
+
+250
+
+150
+
+100
+
+200
+
+2. The en_US.twitter.txt has how many lines of text?
+
+Around 1 million
+
+Over 2 million
+
+Around 5 hundred thousand
+
+Around 2 hundred thousand
+
+3. What is the length of the longest line seen in any of the three en_US data sets?
+
+Over 11 thousand in the news data set
+
+Over 40 thousand in the blogs data set
+
+Over 40 thousand in the news data set
+
+Over 11 thousand in the blogs data set
+
+4. In the en_US twitter data set, if you divide the number of lines where the word "love" (all lowercase) occurs by the number of lines the word "hate" (all lowercase) occurs, about what do you get?
+
+0.25
+
+2
+
+0.5
+
+4
+
+5. The one tweet in the en_US twitter data set that matches the word "biostats" says what?
+
+It's a tweet about Jeff Leek from one of his students in class
+
+They need biostats help on their project
+
+They haven't studied for their biostats exam
+
+They just enrolled in a biostat program
+
+6. How many tweets have the exact characters "A computer once beat me at chess, but it was no match for me at kickboxing". (I.e. the line matches those characters exactly.)
+
+0
+
+2
+
+3
+
+1
