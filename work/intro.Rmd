@@ -1,0 +1,187 @@
+---
+title: "SwiftKey Capstone"
+author: "Rubén Orta Magán"
+date: "March 19, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library("knitr")
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+# Executive Summary
+The goal of this document is to deliver a report for the Capstone project. This is the last part in the Coursera Data Science Specialization. During this project we'll analyze various text documents to discover how the data is structured. We'll clean from non valuable words and with this data We'll build a predictive model. 
+
+# Description of Data
+This document includes an exploratory analysis of the data provided at [the course information page]( https://eventing.coursera.org/api/redirectStrict/7b2ao_9b9m1XsQhaKPYBJe3Sq0aqdCsJMa8LsvLI3WPZzNeb71BQhvn5Y1vJ_3w16MTZ13rfrU6272zGGzugSg.4sj_ZMWwjhiJAPOaU24TiQ.AojpZaSUx6Q2e5H0xLWlkiXIvH0rTwU2O-emb8eTVW73xty1PuG3uYrKhxZ9VUrG1B3YrJI9yPKL-mYBKwgrxz0YcFSGV1FBX0ezzw4WfkXqnc02XSFLA5BMNaMbwoojzySqOyXuM75CGi9Fu-nCJ6pYvShaHxFCgLSllbEOO8tiXh6gLJFDawp2zPMNzOfF4t-lypXAKS-eGWcfTVxNFE8j4hvZQyOm5xKtGIiyohxxO1kyU2QdTdh_NaOwqsXCzvxRp-sqtxMgYVrV8FbyAzgLgnAAdPWAgdAnkTaiaDk4yA8CPA6YAR2ItrfvLdxZCgPB0fJtrMSZKe3zxxOcJivVBD4Bj9unW_g-TsfQNosQfjW-BZMbic5vGYsZIGTGzV_HNpizN8fDIzJrLOMfZMAGWx6PU468Mdd3rY25Gk4). The data set contains files in Finnish, German, Russian, and English. Only English version is used in this project. The files processed are:
+
+1. en_US.blogs.txt
+2. en_US.news.txt
+3. en_US.twitter.txt
+
+We can show some basic stats of the content of the files previously to the cleaning phase.
+```{r, echo=FALSE}
+library("tm")
+library("ggplot2")
+library("RColorBrewer")
+library("wordcloud")
+
+setwd("/home/ruben/Development/swiftkey_capstone/work/en_US/master_data/")
+
+# Retrieve some basic stats about the files
+doc_stats <- system("wc -wml *.txt", intern=TRUE)
+stats <- strsplit(doc_stats, " ")
+
+res_nm <- c(stats[[1]][8],stats[[2]][7], stats[[3]][7])  
+res_lc <- c(stats[[1]][4],stats[[2]][3], stats[[3]][3])
+res_wc <- c(stats[[1]][6],stats[[2]][5], stats[[3]][5])
+res_cc <- c(stats[[1]][7],stats[[2]][6], stats[[3]][6])
+
+summary_1 <- data.frame(res_nm,res_lc, res_wc, res_cc)
+names(summary_1)<- c("File Name","Line Counts", "Word Counts", "Character Counts")
+summary_1
+```
+
+# Cleaning data sets
+In this first report we'll work only with 10% of the data included.
+
+```{r, echo=FALSE}
+# Load Datasets & Cleaning
+txt <- "./en_US/master_data"
+data_ori <- VCorpus(DirSource(txt, encoding = "UTF-8"), readerControl = list(language = "lat"))
+
+# Extract 10% of data to analysis
+set.seed(1)
+data_ori[[1]]$content <- data_ori[[1]]$content[as.logical(rbinom(length(data_ori[[1]]$content), 1, prob=0.1))]
+data_ori[[2]]$content <- data_ori[[2]]$content[as.logical(rbinom(length(data_ori[[2]]$content), 1, prob=0.1))]
+data_ori[[3]]$content <- data_ori[[3]]$content[as.logical(rbinom(length(data_ori[[3]]$content), 1, prob=0.1))]
+```
+
+The package TM provides valuable functions to clean the data set. The data cleaning phase includes this actions.
+
+1. Remove bad words
+2. Remove white-spaces and punctuation
+3. Remove Numbers
+4. Charset cleaning
+5. Remove sparse terms
+
+```{r}
+# http://www.cs.cmu.edu/~biglou/resources/bad-words.txt
+bad_words <- read.csv("bad-words.txt", stringsAsFactors=FALSE, header = TRUE)
+bad_words <- paste(bad_words, collapse=" ")
+stop_words <- c("http", stopwords("english"), bad_words)
+
+data <- tm_map(data_ori, removeWords, stop_words)
+data <- tm_map(data, content_transformer(tolower))
+data <- tm_map(data, stripWhitespace)
+data <- tm_map(data, removePunctuation)
+data <- tm_map(data, removeNumbers)
+data <- tm_map(data, function(x) iconv(x, "latin1", "ASCII", sub=""))
+data <- tm_map(data, PlainTextDocument)
+data_clean <- tm_map(data, stripWhitespace)
+
+dtm_blog <- DocumentTermMatrix(data_clean[1])
+dtm_twitter <- DocumentTermMatrix(data_clean[2])
+dtm_news <- DocumentTermMatrix(data_clean[3])
+
+dtm_blog <- removeSparseTerms(dtm_blog, 0.95)
+dtm_twitter <- removeSparseTerms(dtm_twitter, 0.95)
+dtm_news <- removeSparseTerms(dtm_news, 0.95)
+```
+
+# Exploratory Analysis
+
+With the data cleaned we can continue make some exploratory analysis. The first step is to know the frequency of the words in our data set. We'll use the data related to the twitter file. You can review the same analysis for the other two files in the annex of this document.  
+
+```{r}
+dtm <- dtm_twitter
+freq <- sort(colSums(as.matrix(dtm)), decreasing=TRUE)
+freq_equals_1 <- findFreqTerms(dtm, highfreq = 1)
+```
+
+We can see the 10 words with the higher frequency and how many words appears only once in the document.
+```{r, echo=FALSE}
+freq[1:10]
+length(freq_equals_1)
+```
+
+We can expand the exploration showing a couple of plots related to the frequency of the word counts. The first example is a frequency plot with the words that appear at least 5000 times. The second one is a word cloud plot with words that appears at least 1500 times. 
+
+### Frequency plot
+```{r}
+wf <- data.frame(word=names(freq), freq=freq)
+ggplot(wf[wf$freq > 5000, ], aes(x=word, y=freq)) +
+  geom_bar(stat="identity") +
+  xlab("") +
+  ylab("Frequency") +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  ggtitle("Words Counts > 5,000")
+```
+
+### Word cloud
+```{r}
+pal <- brewer.pal(8,"Dark2")
+wordcloud(names(freq), freq, min.freq=1500,
+          max.words=Inf, random.order=FALSE, rot.per=.15,colors=pal,vfont=c("sans serif","plain") )
+```
+
+# Annex
+
+## Blog Data
+
+Top frequency words and Number of words with frequency one
+```{r, echo=FALSE}
+dtm <- dtm_blog
+freq <- sort(colSums(as.matrix(dtm)), decreasing=TRUE)
+freq_equals_1 <- findFreqTerms(dtm, highfreq = 1)
+freq[1:10]
+length(freq_equals_1)
+```
+
+#### Frequency plot
+```{r, echo=FALSE}
+wf <- data.frame(word=names(freq), freq=freq)
+ggplot(wf[wf$freq > 5000, ], aes(x=word, y=freq)) +
+  geom_bar(stat="identity") +
+  xlab("") +
+  ylab("Frequency") +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  ggtitle("Words Counts > 5,000")
+```
+
+#### Word cloud
+```{r, echo=FALSE}
+pal <- brewer.pal(8,"Dark2")
+wordcloud(names(freq), freq, min.freq=1500,
+          max.words=Inf, random.order=FALSE, rot.per=.15,colors=pal,vfont=c("sans serif","plain") )
+```
+
+## News Data
+
+Top frequency words and Number of words with frequency one
+```{r, echo=FALSE}
+dtm <- dtm_news
+freq <- sort(colSums(as.matrix(dtm)), decreasing=TRUE)
+freq_equals_1 <- findFreqTerms(dtm, highfreq = 1)
+freq[1:10]
+length(freq_equals_1)
+```
+
+#### Frequency plot
+```{r, echo=FALSE}
+wf <- data.frame(word=names(freq), freq=freq)
+ggplot(wf[wf$freq > 5000, ], aes(x=word, y=freq)) +
+  geom_bar(stat="identity") +
+  xlab("") +
+  ylab("Frequency") +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  ggtitle("Words Counts > 5,000")
+```
+
+#### Wordcloud plot
+```{r, echo=FALSE}
+pal <- brewer.pal(8,"Dark2")
+wordcloud(names(freq), freq, min.freq=1500,
+          max.words=Inf, random.order=FALSE, rot.per=.15,colors=pal,vfont=c("sans serif","plain") )
+```

@@ -11,10 +11,10 @@ doc_stats <- system("wc -wml en_US/samples/*.txt", intern=TRUE)
 stats <- strsplit(doc_stats, " ")
 
 # Extracting some basic stats
-res_nm <- c(stats[[1]][7],stats[[2]][7], stats[[3]][8])  
-res_lc <- c(stats[[1]][3],stats[[2]][3], stats[[3]][3])
-res_wc <- c(stats[[1]][5],stats[[2]][5], stats[[3]][5])
-res_cc <- c(stats[[1]][6],stats[[2]][6], stats[[3]][7])
+res_nm <- c(stats[[1]][8],stats[[2]][8], stats[[3]][10])  
+res_lc <- c(stats[[1]][4],stats[[2]][4], stats[[3]][4])
+res_wc <- c(stats[[1]][6],stats[[2]][6], stats[[3]][7])
+res_cc <- c(stats[[1]][7],stats[[2]][7], stats[[3]][9])
 
 # remove stopwords, badwords and other words
 # http://www.cs.cmu.edu/~biglou/resources/bad-words.txt
@@ -41,11 +41,34 @@ names(summary_1)<- c("File Name","Line Counts", "Word Counts", "Clean Word Count
 summary_1
 
 dtm2 <- as.matrix(dtm)
-frequency <- colSums(dtm2)
-frequency <- sort(frequency, decreasing=TRUE)
+frequency_tot <- colSums(dtm2)
+frequency_tot <- sort(frequency, decreasing=TRUE)
+frequency_blog <- sort(dtm[[1]], decreasing=TRUE)
+
+
+terms_freq_1 <- findFreqTerms(dtm, highfreq = 1)
 
 #histogram 
-hist(frequency, right=FALSE, main="Words", xlab="Counts in Documents")  
+hist(frequency,right=FALSE, main="Words", xlab="Counts in Documents")  
+
+
+library(ggplot2)   
+p <- ggplot(frequency[1:100], aes(word, freq))    
+p <- p + geom_bar(stat="identity")   
+p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))   
+p 
+
+wf <- data.frame(word=names(freq_blog), freq_blog=freq_blog)
+ggplot(wf[wf$freq_blog>4000, ], aes(x=word, y=freq_blog)) +
+  geom_bar(stat="identity") +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  xlab("") +
+  ylab("Frequency") +
+  ggtitle("Words with court > 60,000\n in blog.txt")
+
+wordcloud(names(freq_blog), freq_blog, min.freq=1000,
+          max.words=Inf, random.order=FALSE, rot.per=.15,colors=brewer.pal(8,"Dark2"))
+
 
 wordcloud(data_clean, max.words = 100, random.order = FALSE)
 wordcloud(data_clean[[1]], max.words = 100, random.order = FALSE)
